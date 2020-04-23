@@ -1,0 +1,27 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.example.imagefilterapplication.MainActivity">
+
+    <!-- Action bar button for the save feature -->
+    <item
+        android:id="@+id/save_action"
+        android:icon="@drawable/ic_save_btn"
+        android:title="Save Button"
+        app:showAsAction="ifRoom" />
+
+    <!-- Action bar button for the share feature -->
+    <item
+        android:id="@+id/share_action"
+        android:icon="@drawable/ic_share_btn"
+        android:title="Share Button"
+        app:showAsAction="ifRoom"
+        />
+
+    <!-- Action bar menu button for the permissions intent -->
+    <item
+        android:id="@+id/Permissions"
+        android:title="Permissions"
+        app:showAsAction="never"
+        />
+</menu>
