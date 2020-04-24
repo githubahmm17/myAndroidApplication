@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat;
 
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.text.Layout;
 import android.view.View;
 import android.view.Menu;
@@ -44,6 +45,11 @@ public class MainActivity extends AppCompatActivity {
     FloatingActionButton FAB;
     TextView showText;
     Menu mMenu; //holds the reference for the menu bar
+
+    //will hold the value for the interval between the back button being pressed
+    private  long backPressedTime;
+    //Toast message when back button is pressed
+    private Toast backToast;
 
     //empty container to store image file name when assigned
     String currentImage = "";
@@ -80,22 +86,8 @@ public class MainActivity extends AppCompatActivity {
         FAB.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //if the OS is greater than Marshmallow, check for runtime permission for storage access
-                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    if(ContextCompat.checkSelfPermission(MainActivity.this,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-                        //permission not granted for storage access, request it
-                        requestPermissionGallery();
-                    }
-                    else {
-                        //permission was already granted
-                        addImage();
-                    }
-                }
-                else {
-                    //OS is less than Marshmallow, so permission is not needed
-                    addImage();
-                }
+                //run the method which handles the users options for adding images
+                addImage();
             }
         });
 
@@ -103,12 +95,42 @@ public class MainActivity extends AppCompatActivity {
         filterButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //puts this image onto the ImageView 'filterImage' container
-                filterImage.setImageResource(R.drawable.ic_filter);
+                //hold all the filter options
+                final CharSequence[] filters = {"Default", "Rainbow", "Stars", "Hearts", "Angel", "Cancel"};
+
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle("Choose a Filter");
+
+                //alert dialog box which listens for the clicks
+                builder.setItems(filters, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int i) {
+                        if(filters[i].equals("Default")){
+                            //puts this image onto the ImageView 'filterImage' container, gets it from drawable folder
+                            filterImage.setImageResource(R.drawable.ic_filter);
+                        }
+                        else if(filters[i].equals("Rainbow")){
+                            filterImage.setImageResource(R.drawable.rainbow);
+                        }
+                        else if(filters[i].equals("Stars")){
+                            filterImage.setImageResource(R.drawable.stars);
+                        }
+                        else if(filters[i].equals("Hearts")){
+                            filterImage.setImageResource(R.drawable.hearts);
+                        }
+                        else if(filters[i].equals("Angel")){
+                            filterImage.setImageResource(R.drawable.wings_and_halo);
+                        }
+                        else if(filters[i].equals("Cancel")){
+                            dialog.dismiss();
+                        }
+                    }
+                });
+                builder.show();
 
                 //Image can now be saved or shared
-                mMenu.findItem(R.id.save_action).setEnabled(true);
-                mMenu.findItem(R.id.share_action).setEnabled(true);
+                mMenu.findItem(R.id.share_action).setVisible(true);
+                mMenu.findItem(R.id.save_action).setVisible(true);
             }
         });
 
@@ -123,8 +145,9 @@ public class MainActivity extends AppCompatActivity {
                 //turn off those buttons, until another image is added
                 filterButton.setEnabled(false);
                 removeButton.setEnabled(false);
-                mMenu.findItem(R.id.save_action).setEnabled(false);
-                mMenu.findItem(R.id.share_action).setEnabled(false);
+                //Hide the menu buttons, until another image is added
+                mMenu.findItem(R.id.save_action).setVisible(false);
+                mMenu.findItem(R.id.share_action).setVisible(false);
 
                 //turned on, so images can be added after previous image was removed
                 FAB.setEnabled(true);
@@ -135,6 +158,24 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, "Image removed", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    //listener for the back button
+    @Override
+    public void onBackPressed() {
+            //if the back button is pressed within 2 seconds, it will run this code
+        if (backPressedTime + 2000 > System.currentTimeMillis()){
+            //cancel toast message, so it closes with the app
+            backToast.cancel();
+            super.onBackPressed();
+            return;
+        }
+        //if the back button is pressed after 2 seconds
+        else {
+            backToast = Toast.makeText(getBaseContext(), "Press back again to exit", Toast.LENGTH_SHORT);
+            backToast.show();
+        }
+        backPressedTime = System.currentTimeMillis();
     }
 
     //method which makes an alert dialog and lets the user choose to add an image through gallery or camera
@@ -174,10 +215,27 @@ public class MainActivity extends AppCompatActivity {
                 }
             //option Gallery was chosen
             else if(options[i].equals("Gallery")){
-                    //start a new intent, so the user can choose an image from the gallery
-                    Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                    intent.setType("image/*");
-                    startActivityForResult(intent, GALLERY_REQUEST);
+                    //if the OS is greater than Marshmallow, check for runtime permission for storage access
+                    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        if (ContextCompat.checkSelfPermission(MainActivity.this,
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                            //permission not granted for storage access, request it
+                            requestPermissionGallery();
+                        }
+                        else {
+                            //permission already granted. Start a new intent, so the user can choose an image from the gallery
+                            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                            intent.setType("image/*");
+                            startActivityForResult(intent, GALLERY_REQUEST);
+                        }
+                    }
+                    else {
+                        //OS is less than Marshmallow. Start a new intent, so the user can choose an image from the gallery
+                        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                        intent.setType("image/*");
+                        startActivityForResult(intent, GALLERY_REQUEST);
+
+                    }
                 }
             //The Cancel option was picked
             else if(options[i].equals("Cancel")){
@@ -354,7 +412,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-
         }
     }
 
@@ -364,8 +421,8 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.menu_main, menu);
 
         //menu bar buttons turned off until an image is added
-        menu.findItem(R.id.save_action).setEnabled(false);
-        menu.findItem(R.id.share_action).setEnabled(false);
+        menu.findItem(R.id.save_action).setVisible(false);
+        menu.findItem(R.id.share_action).setVisible(false);
 
         //menu reference
         mMenu = menu;
@@ -387,6 +444,7 @@ public class MainActivity extends AppCompatActivity {
                 Bitmap saveBitmap = getScreenShot(saveContent);
                 //the bitmap from getScreenShot, is sent to this method
                 saveImage(saveBitmap);
+
                 return true;
 
             //checks the on click listener for the share button
@@ -429,8 +487,15 @@ public class MainActivity extends AppCompatActivity {
 
             //checks the on click listener for the permissions option
             case R.id.Permissions:
-                Toast.makeText(this, "Show the permissions enabled on this app", Toast.LENGTH_SHORT).show();
+                //new intent to open the app info page
+                Intent intent = new Intent();
+                //take the user to the app details page
+                intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                Uri uri = Uri.fromParts("package", getPackageName(), null);
+                intent.setData(uri);
+                startActivity(intent);
             return true;
+
             default:
                 return super.onOptionsItemSelected(item);
         }
